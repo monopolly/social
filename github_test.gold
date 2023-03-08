@@ -1,0 +1,33 @@
+package social
+
+//testing
+
+import (
+	"fmt"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestGithub(ggggg *testing.T) {
+	function, _, _, _ := runtime.Caller(0)
+	fn := runtime.FuncForPC(function).Name()
+	fn = fn[strings.LastIndex(fn, ".Test")+5:]
+	fn = strings.Join(strings.Split(fn, "_"), ": ")
+	fmt.Printf("\033[1;32m%s\033[0m\n", fn)
+
+	a := assert.New(ggggg)
+	_ = a
+
+	return
+
+	/* jwt */
+	token := "dfe0c3e7cc14ebc19dc2"
+	b, err := Github(token, "cc83455c88ffbc30fb3f", "8521bd44238fe19bc11ad52cee3c29c6e35b6c27")
+	a.Nil(err)
+	a.NotNil(b)
+	fmt.Println(b)
+
+}

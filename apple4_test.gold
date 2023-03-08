@@ -1,0 +1,50 @@
+package social
+
+//testing
+
+import (
+	"context"
+	"fmt"
+	"runtime"
+	"strings"
+	"testing"
+
+	apsg "github.com/jmind-systems/go-apple-signin"
+	"github.com/stretchr/testify/assert"
+)
+
+func Test4(ggggg *testing.T) {
+	function, _, _, _ := runtime.Caller(0)
+	fn := runtime.FuncForPC(function).Name()
+	fn = fn[strings.LastIndex(fn, ".Test")+5:]
+	fn = strings.Join(strings.Split(fn, "_"), ": ")
+	fmt.Printf("\033[1;32m%s\033[0m\n", fn)
+
+	a := assert.New(ggggg)
+	_ = a
+	// Pass credentials: team_id, client_id and key_id.
+	opts := apsg.WithCredentials(teamID, clientID, keyID)
+
+	// Create the client.
+	client, err := apsg.NewClient(opts)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// Load your p8 key into the client.
+	if err := client.LoadP8CertByByte([]byte(privateKey)); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// Now client is ready.
+	ctx := context.Background()
+	resp, err := client.Authenticate(ctx, appletoken)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println(resp.UserIdentity.ID, resp.UserIdentity.Email, resp.AccessToken)
+}
