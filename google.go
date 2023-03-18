@@ -28,6 +28,7 @@ func Google(token string) (u *User, err errors.E) {
 	u = new(User)
 	u.Email = jsons.String(b, "email")
 	u.Key = u.Email
+	u.Token = u.Email
 	u.Name = jsons.String(b, "name")
 	u.Image = jsons.String(b, "picture")
 	u.Verified = jsons.Bool(b, "email_verified")
