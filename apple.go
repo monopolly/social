@@ -8,7 +8,8 @@ import (
 	"github.com/monopolly/errors"
 )
 
-func Apple(token, privateKey, teamID, clientID, keyID string) (u User, err errors.E) {
+func Apple(token, privateKey, teamID, clientID, keyID string) (u *User, err errors.E) {
+	u = new(User)
 
 	var er error
 	secret, er := apple.GenerateClientSecret(privateKey, teamID, clientID, keyID)
