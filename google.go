@@ -8,66 +8,66 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+/* {
+  "sub": "101886101454223860289",
+  "name": "Martin Prestone",
+  "given_name": "Martin",
+  "family_name": "Prestone",
+  "picture": "https://lh3.googleusercontent.com/a/ACg8ocLGZJiSoOOW3gS6dVg2RPBCyWGS4H1qsFbDx8ThRVAy=s96-c",
+  "email": "wire.common@gmail.com",
+  "email_verified": true,
+  "locale": "en"
+} */
+
 // google Bearer token auth
 func Google(token string) (u *User, err errors.E) {
-	// curl -H 'Authorization: Bearer $ACCESS_TOKEN' https://www.googleapis.com/oauth2/v3/tokeninfo
+	// curl -H 'Authorization: Bearer $ACCESS_TOKEN' https://www.googleapis.com/oauth2/v3/userinfo
 	req := fasthttp.AcquireRequest()
 	resp := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseRequest(req)
+	defer fasthttp.ReleaseResponse(resp)
 
 	req.SetRequestURI("https://www.googleapis.com/oauth2/v3/userinfo")
-	req.Header.SetMethod("GET")
+	req.Header.SetMethod(fasthttp.MethodGet)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	er := fasthttp.Do(req, resp)
+	er := fasthttp.DoTimeout(req, resp, httpTimeout)
 	if er != nil {
 		err = errors.Access(er)
+		err.AddPoint()
 		return
 	}
 
 	b := resp.Body()
-	fmt.Println(string(b))
+
+	ers := jsons.String(b, "error")
+	if ers != "" {
+		err = errors.Access(ers)
+		err.Set("origin", jsons.String(b, "error_description"))
+		err.AddPoint()
+		return
+	}
+
+	if code := resp.StatusCode(); code != fasthttp.StatusOK {
+		err = errors.Access(code)
+		err.Set("origin", string(b))
+		err.AddPoint()
+		return
+	}
+
+	// fmt.Println(string(b))
 	u = new(User)
+	u.ID = jsons.String(b, "sub")
 	u.Email = jsons.String(b, "email")
 	u.Key = u.Email
 	u.Token = u.Email
-	u.Name = jsons.String(b, "name")
+	u.Name = jsons.String(b, "given_name")
+	u.Family = jsons.String(b, "family_name")
+	if u.Name == "" {
+		u.Name = jsons.String(b, "name")
+	}
 	u.Image = jsons.String(b, "picture")
 	u.Verified = jsons.Bool(b, "email_verified")
 	u.Lang = jsons.String(b, "locale")
+	u.Source = string(b)
 	return
 }
-
-/*
-func Gmail(token string, appid string) (u User, err errors.E) {
-	t, er := jwt.Parse(token, func(t *jwt.Token) (c interface{}, er error) {
-		fmt.Println(t)
-		return
-	})
-	if er != nil {
-		fmt.Println(er)
-		err = errors.Parse("jwt")
-		return
-	}
-
-	b := jsons.Marshal(t)
-	u.Email = jsons.String(b, "email")
-	if u.Email == "" {
-		err = errors.Email()
-		return
-	}
-
-	u.Key = u.Email
-	u.Name = jsons.String(b, "name")
-
-	if !strings.Contains(jsons.String(b, "iss"), "accounts.google.com") {
-		err = errors.Valid("iss")
-		return
-	}
-
-	if time.Now().Unix() > jsons.Int64(b, "exp") {
-		err = errors.Valid("exp")
-		return
-	}
-
-	return
-}
-*/

@@ -2,7 +2,6 @@ package social
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Timothylock/go-signin-with-apple/apple"
 	"github.com/monopolly/errors"
@@ -11,12 +10,10 @@ import (
 func Apple(token, privateKey, teamID, clientID, keyID string) (u *User, err errors.E) {
 	u = new(User)
 
-	var er error
 	secret, er := apple.GenerateClientSecret(privateKey, teamID, clientID, keyID)
 	if er != nil {
-		//fmt.Println("error generating secret: " + err.Error())
-		err = errors.Internal(er)
-		err.SetCodeLine()
+		err = errors.Server(er)
+		err.AddPoint()
 		return
 	}
 
@@ -34,38 +31,48 @@ func Apple(token, privateKey, teamID, clientID, keyID string) (u *User, err erro
 	// Do the verification
 	er = client.VerifyAppToken(context.Background(), vReq, &resp)
 	if er != nil {
-		//fmt.Println(err.Error())
 		err = errors.Token(er)
+		err.AddPoint()
 		return
 	}
 
 	if resp.Error != "" {
-		err = errors.Internal(resp.Error)
+		err = errors.Server(resp.Error)
+		err.Set("origin", resp.ErrorDescription)
+		err.AddPoint()
 		return
 	}
 
 	// Get the unique user ID
 	u.ID, er = apple.GetUniqueID(resp.IDToken)
 	if er != nil {
-		//fmt.Println("failed to get unique ID: " + )
-		err = errors.Internal(er)
+		err = errors.Server(er)
+		err.AddPoint()
 		return
 	}
 
 	// Get the email
 	claim, er := apple.GetClaims(resp.IDToken)
-	if err != nil {
-		err = errors.Internal(er)
+	if er != nil {
+		err = errors.Server(er)
+		err.AddPoint()
 		return
 	}
 
-	u.Email = fmt.Sprint((*claim)["email"])
+	u.Email, _ = (*claim)["email"].(string)
 	if u.Email == "" {
-		err = errors.Email("email not found")
+		err = errors.Server("email not found")
+		err.AddPoint()
 		return
 	}
-	/* emailVerified := (*claim)["email_verified"]
-	isPrivateEmail := (*claim)["is_private_email"]
-	*/
+
+	// apple sends email_verified either as a bool or as a quoted string
+	switch v := (*claim)["email_verified"].(type) {
+	case bool:
+		u.Verified = v
+	case string:
+		u.Verified = v == "true"
+	}
+
 	return
 }
